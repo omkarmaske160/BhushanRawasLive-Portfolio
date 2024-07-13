@@ -1,11 +1,11 @@
 const validator = require("validator");
 const feedback = require("../model/emailModel");
-const sendEmail = require("../utils/email");
+const { sendEmail } = require("../utils/email");
+const { sendSelfEmail } = require("../utils/selfEmail");
 
 exports.addFeedback = async (req, res) => {
     try {
-        const { name, email, description, mobile } = req.body
-
+        const { name, email, description, mobile } = req.body;
 
         console.log(req.body);
         if (
@@ -14,30 +14,34 @@ exports.addFeedback = async (req, res) => {
             validator.isEmpty(mobile) ||
             validator.isEmpty(description)
         ) {
-            res.status(400).json({
-                message: "all fields required"
-            })
+            return res.status(400).json({
+                message: "All fields required"
+            });
         }
 
         if (!validator.isEmail(email)) {
             return res.status(400).json({
-                message: "please provide valid email"
-            })
+                message: "Please provide a valid email"
+            });
         }
-
 
         // Create feedback entry in the database
         const data = await feedback.create(req.body);
 
-        // Send email
+        // Send email to client
         await sendEmail({
-            to: req.body.email,
-            name: req.body.name
+            to: email,
+            name
         });
+
+
+
+        // Send email to yourself
+        await sendSelfEmail({ name, email, mobile, description });
 
         // Respond to the client
         res.status(200).json({
-            message: `Feedback sent successfully`,
+            message: "Feedback sent successfully",
         });
     } catch (error) {
         // Handle errors
